@@ -536,6 +536,244 @@ const User = mongoose.model('User', { name: String, age: Number });
 const user = await User.findOne({ name: 'John' });
 ```
 
+# Routing
+
+### Creating Routes
+
+Next.js has a file-based routing system in which each page automatically becomes a route based on its file name.
+**Folders**: It is used to define routes that includes page.js.
+**Files**: Files are used to create UI.
+
+For example, to create your first page, add a page.js file inside the app directory and export a React component:
+
+```js
+export default function Page() {
+  return <h1>Hello, Next.js!</h1>
+}
+```
+
+### Nested Routes
+
+To create a nested route, you can nest folders inside each other. For example, you can add a new` /dashboard/settings` route by nesting two new folders in the app directory.
+
+The /dashboard/settings route is composed of three segments:
+
+- / (Root segment)
+- dashboard (Segment)
+- settings (Leaf segment)
+
+### Colocation
+
+- You can specify our own files (eg: component, styles) inside folder in the app directory.
+- .js, .jsx, or .tsx file extensions can be used for special files.
+- Only the page.js or route.js are publically addressable.
+	- components/button.jsx
+	- lib/constant.js
+
+### Pages
+
+- A page is a user interface (UI) specific to a route. To create a page, export a component from a page.js file. Use nested folders to define a route, and include a page.js file to make the route accessible to the public.
+- .js, .jsx, or .tsx file extensions can be used for Pages.
+- Pages are Server Components by default but can be set to a Client Component.
+- Pages can fetch data. 
+- Create your first page by adding a page.js file inside the app directory:
+
+```js
+// `app/page.js` is the UI for the `/` URL
+export default function Page() {
+  return <h1>Hello, Home page!</h1>
+}
+```
+
+### Layouts
+
+A layout is a user interface (UI) that is used on multiple pages. When you move between pages, layouts keep their current state, stay interactive, and don't reload. Layouts can also be nested.
+
+To create a layout, you can export a React component from a file called layout.js as the default export. The component should have a "children" prop that will be filled with either a child layout (if there is one) or a child page when it's being rendered.
+
+**Example**
+```js
+// app/dashboard/layout.js
+export default function DashboardLayout({
+  children, // will be a page or nested layout
+}) {
+  return (
+    <section>
+      {/* Include shared UI here e.g. a header or sidebar */}
+      <nav></nav>
+ 
+      {children}
+    </section>
+  )
+}
+```
+
+- The main layout at the very top is known as the Root Layout. It is used on all pages of an application. Root layouts should have html and body tags.
+- Each part of a route can choose to have its own layout. These layouts will be used for all pages in that part.
+- Layouts are Server Components by default but can be set to a Client Component.
+- Layouts can fetch data.
+- Layouts do not have access to the current route segment(s). To access route segments, you can use useSelectedLayoutSegment or useSelectedLayoutSegments in a Client Component.
+- .js, .jsx, or .tsx file extensions can be used for Layouts.
+- A layout.js and page.js file can be defined in the same folder. The layout will wrap the page.
+
+### Root Layout
+
+The root layout is defined at the top level of the app directory and applies to all routes.
+
+**Example**
+
+```js
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+- The app directory must include a root layout.
+- The root layout must define `<html>` and `<body>` tags since Next.js does not automatically create them.
+- The root layout is a Server Component by default and can not be set to a Client Component.
+- Only the root layout can contain `<html>` and `<body>` tags
+
+### Metadata
+
+Metadata can be defined by exporting a metadata object or generateMetadata function in a layout.js or page.js file.
+
+**Example**
+
+```js
+export const metadata = {
+  title: 'Next.js',
+}
+ 
+export default function Page() {
+  return '...'
+}
+```
+
+- Don't manually include `<head> ` tags like `<title>` and `<meta>` in the main layouts. Instead, use the Metadata API that takes care of advanced tasks like managing streaming and eliminating duplicate `<head>` elements.
+
+### Linking and Navigating
+
+The Next.js router uses a combination of server-based and client-based navigation. It allows for quick loading and rendering, and ensures that the client's current state is maintained during navigation. This approach avoids unnecessary re-rendering, allows for interruptions, and prevents conflicts between different actions.
+
+There are two ways to navigate between routes:
+
+- `<Link>` Component
+- useRouter Hook
+
+### `<Link>` Component
+
+The component called `<Link>` in React is an extension of the HTML `<a>` element. It allows for prefetching and navigation between routes on the client side. In Next.js, it is the main method used for moving between different routes.
+
+To use `<Link>`, import it from next/link, and pass a href prop to the component:
+
+### Linking to Dynamic Segments
+
+When linking to dynamic segments, you can use template literals and interpolation to generate a list of links. 
+
+**Example**
+
+### Checking Active Links
+
+You can use usePathname() to determine if a link is active. For example, to add a class to the active link, you can check if the current pathname matches the href of the link:
+
+```js
+'use client'
+ 
+import { usePathname } from 'next/navigation'
+import { Link } from 'next/link'
+ 
+export function Navigation({ navLinks }) {
+  const pathname = usePathname()
+ 
+  return (
+    <>
+      {navLinks.map((link) => {
+        const isActive = pathname.startsWith(link.href)
+ 
+        return (
+          <Link
+            className={isActive ? 'text-blue' : 'text-black'}
+            href={link.href}
+            key={link.name}
+          >
+            {link.name}
+          </Link>
+        )
+      })}
+    </>
+  )
+}
+```
+
+### Scrolling to an id
+
+The default behavior of `<Link>` is to scroll to the top of the route segment that has changed. When there is an id defined in href, it will scroll to the specific id, similarly to a normal `<a>` tag.
+
+To prevent scrolling to the top of the route segment, set scroll={false} and add a hashed id to href:
+
+```js
+
+<Link href="/#hashid" scroll={false}>
+  Scroll to specific id.
+</Link>
+
+```
+
+### useRouter() Hook
+
+The useRouter hook allows you to programmatically change routes inside Client Components.
+
+To use useRouter, import it from next/navigation, and call the hook inside your Client Component:
+
+```js
+
+'use client'
+ 
+import { useRouter } from 'next/navigation'
+ 
+export default function Page() {
+  const router = useRouter()
+ 
+  return (
+    <button type="button" onClick={() => router.push('/dashboard')}>
+      Dashboard
+    </button>
+  )
+}
+
+```
+
+- Use the `<Link>` component to navigate between routes unless you have a specific requirement for using useRouter.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
