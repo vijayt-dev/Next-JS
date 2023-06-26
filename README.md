@@ -750,30 +750,206 @@ export default function Page() {
 - Use the `<Link>` component to navigate between routes unless you have a specific requirement for using useRouter.
 
 
+### Route Groups
+
+A folder can be wrapped in parentheses (folderName) to create route groups.
+
+The purpose of having the folder is purely organizational and it should not be included in the URL path of the route.
 
 
+### Dynamic Routes
+
+Dynamic routes  allow you to create dynamic pages without having to define each route explicitly. **Example** app/post/[slug]
+Dynamic route can be created by wrapping a folder name in square brackets.
+Dynamic routes give params props can be accessed by layout, page, route, and generateMetadata functions.
+
+**Example**
+
+```js
+// app/post/[slug]/page.js	
+export function Post({params}) {
+  return (
+    <div>
+      <h1>Post: {params.id}</h1>
+    </div>
+  );
+}
+
+```
+
+#### Catch-all Segments
+
+The catch-all segment is used to match URLs with any number of segments.
+**Example** app/shop/[...slug]/page.js
+
+#### Optional Catch-all Segments
+
+Catch-all Segments can be optional by adding the parameter in double square brackets: **Example**  app/shop/[[...folderName]]/page.js.
+
+In optional catch-all routes the route without the parameter will also get match.
+
+### Loading UI and Streaming
+
+loading.js helps to create loading UI wth the help of React Suspense.
+You can show loading state from the server while the route segment loads once rendering is completed the new content added.
+
+#### Streaming with Suspense
+
+##### What is Streaming?
+
+Before going to streaming understand SSR  and its limitation
+
+With SSR, list of steps that need to completed before user can see and interact the page.
+- First all data for a given page is fetched on the server.
+- Then server reder the HTML page.
+- The HTML, CSS, and JavaScript for the page are sent to the client.
+- A non-interactive user interface is shown using the generated HTML, and CSS.
+- Finally, React hydrates the user interface to make it interactive.
+
+The server can render the HTML for a page only after all the data has been fetched because the steps are sequential and blocking. Similarly, on the client side, React can only hydrate the UI once the code for all components in the page has been downloaded.
+
+However, the page display to the user may be delayed since all server data fetching must be completed prior to rendering.
+
+Streaming enables the fragmentation of a page's HTML into smaller portions and gradually transmits these portions from the server to the client.
+
+Streaming enables each component to be treated as a separate unit, known as a chunk. This allows for the prioritization of components that are more important or independent of data, enabling React to begin hydration earlier. Components with lower priority can be sent in the same server request once their data has been retrieved.
+
+Streaming becomes especially advantageous when you aim to avoid the page from being blocked during rendering due to lengthy data requests.
+
+**Example**
+
+`<Suspense>` works by wrapping a component that performs an asynchronous action (e.g. fetch data), showing fallback UI (e.g. skeleton, spinner) while it's happening, and then swapping in your component once the action completes.
+
+```js
+import React, { Suspense } from 'react'
+import Loading from './loading'
+
+export default function Dashboard() {
+    return (
+    <Suspense fallback={<Loading />}>
+    <h1>Hello, Dashboard Page!</h1>
+    </Suspense>
+    )
+  }
+
+```
+
+Utilizing Suspense provides the advantages of:
+
+- Streaming Server Rendering: Enabling the gradual rendering of HTML from the server to the client.
+- Selective Hydration: Allowing React to prioritize the interactivity of components based on user interaction.
 
 
+### Error Handling
 
+The usage of the error.js file convention enables you to handle runtime errors in nested routes.
+Maintain the functionality of the rest of the app while isolating errors to the relevant segments.
+Enhance the capability to recover from an error without requiring a complete page reload.
 
+**Example**
 
+```js
 
+//app/dashboard/error.js
+'use client'
+ 
+export default function Error({ error, reset }) {
+  return (
+    <div>
+      <h2>Something went wrong!</h2>
+      <button onClick={() => reset()}>Try again</button>
+    </div>
+  )
+}
 
+```
 
+#### How error.js Works
 
+- The file error.js creates a React Error Boundary that wraps a nested child segment or page.js component automatically.
+- The exported React component from error.js serves as the fallback component.
+- If an error occurs within the error boundary, it is captured and the fallback component is rendered.
+- While the fallback error component is active, layouts above the error boundary retain their state and interactivity, and the error component can provide functionality to recover from the error.
 
+#### Recovering From Errors
 
+If an error is temporary, attempting to resolve the issue by retrying might be effective. In the context of an error component, the reset() function can be utilized to prompt the user to recover from the error. By executing this function, the Error boundary's contents are re-rendered in an attempt to replace the fallback error component with the outcome of the re-render.
 
+### Parallel Routes
 
+Parallel Routing enables the simultaneous or conditional rendering of multiple pages within the same layout.
 
+As each route is streamed in independently, Parallel Routing enables you to define separate error and loading states for each route.
 
+With Parallel Routing, you have the ability to conditionally display a slot depending on specific conditions, such as the authentication state. This feature enables the use of completely separate code on the same URL.
 
+#### Convention
 
+Named slots are utilized to create parallel routes. These slots are defined using the "@folder" convention and passed as props to the layout at the same level.
 
+The URL structure remains unaffected by slots, as they are not considered route segments. Therefore, the file path /@team/members can be accessed at /members.
 
+For example, the following file structure defines two explicit slots: @analytics and @team.
 
+With the given folder structure, the app/layout.js component now receives the @analytics and @team slots props and can render them simultaneously with the children prop.
 
+```js
+export default function Layout(props) {
+  return (
+    <>
+      {props.children}
+      {props.team}
+      {props.analytics}
+    </>
+  )
+}
+```
 
+#### Unmatched Routes
+
+The content displayed in a slot will automatically correspond to the current URL by default.
+
+In the case of an unmatched slot, If Next.js is unable to determine the active state of a slot based on the current URL, you can specify a default.js file to be rendered as a fallback.
+
+```js
+// app/@authModal/login/default.js
+export default function Default() {
+  return null
+}
+```
+
+#### Conditional Routes
+
+Parallel Routes can be used to implement conditional routing. For example, you can render a @dashboard or @login route depending on the authentication state.
+
+**Example: **
+
+```js
+import { getUser } from '@/lib/auth'
+ 
+export default function Layout({ params, profile, login }) {
+  const isLoggedIn = getUser()
+  return isLoggedIn ? profile : login
+}
+
+```
+
+### Intercepting Routes
+
+The ability to intercept routes enables you to load a route within the existing layout without losing the context of the current page. This routing approach proves beneficial when you need to "intercept" a specific route and display an alternative route instead.
+
+It intercepts the /feed route and masks it by displaying /photo/123 instead when a photo is clicked within the feed, resulting in a modal overlaying the feed showing the photo.
+
+#### Convention
+
+The (..) convention, similar to the relative path convention ../, can be used to define intercepting routes for segments.
+
+You can use:
+
+- (.) to match segments on the same level
+- (..) to match segments one level above
+- (..)(..) to match segments two levels above
+- (...) to match segments from the root app directory
 
 
 
