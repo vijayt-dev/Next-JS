@@ -952,5 +952,286 @@ You can use:
 - (...) to match segments from the root app directory
 
 
+## Data Fetching
+
+The App Router is a simplified way to fetch data in your Next.js application.
+You can fetch data inside layouts, pages, and components. Data fetching is also compatible with Streaming and Suspense.
+
+- Fetch data on the server using Server Components: Server Components are a great way to fetch data on the server. This can improve performance, as the data will be pre-rendered and cached on the server.
+- Fetch data in parallel to minimize waterfalls and reduce loading times.
+- Next.js will automatically cache and  dedupe requests in a tree. This means that if you fetch the same data in multiple times, Next.js will only fetch the data once.
+
+### Static Data Fetching
+
+It fetch data at build time and cache it for improved loading performance. This means that the data will be fetched once and stored in memory, so it can be quickly retrieved when a user visits a page.
+
+**Example**
+
+```js
+import Image from "next/image";
+async function getImage() {
+  const image = await fetch("https://dog.ceo/api/breeds/image/random");
+  const data = await image.json();
+  return data;
+}
+const Static = async () => {
+  const {message} = await getImage();
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-between p-24">
+      <h2>Static Image</h2>
+      <div>
+        <Image src={message} width={500} height={500} />
+      </div>
+    </div>
+  );
+};
+
+export default Static;
+
+```
+
+### Static with Revalidating Data Fetching
+
+It will periodically check the data to be updated. If it has, Next.js will fetch the updated data and re-render the page.
+
+**Example**
+
+```js
+import Image from "next/image";
+
+async function getImagesStatic2() {
+  const image = await fetch("https://dog.ceo/api/breeds/image/random", {
+    next: { revalidate: 10 },
+  });
+  const data = await image.json();
+  return data;
+}
+
+const Static2 = async () => {
+  const {message} = await getImagesStatic2();
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-between p-24">
+      <h2>Static2 Image</h2>
+      <div>
+        <Image src={message} width={500} height={500} />
+      </div>
+    </div>
+  );
+};
+
+export default Static2;
+
+```
+
+### Dynamic Data Fetching
+
+It allows you to fetch data from at request time, rather than at build time. This can be useful for applications that need to display data that is constantly changing.
+
+**Example**
+
+```js
+
+import Image from "next/image";
+
+export async function getImagesDynamic() {
+  const image = await fetch("https://dog.ceo/api/breeds/image/random", {cache: "no-cache"});
+  const data = await image.json();
+  return data;
+}
+
+const Dynamic = async () => {
+  const { message } = await getImagesDynamic();
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-between p-24">
+      <h2>Dynamic Image</h2>
+      <div>
+        <Image src={message} width={500} height={500} />
+      </div>
+    </div>
+  );
+};
+
+export default Dynamic;
+
+
+```
+
+### Parallel Data Fetching
+
+It allows you to fetch data from multiple sources in parallel, rather than sequentially. This can improve the performance of your application by reducing the amount of time it takes to load data.
+
+#### Streaming and Suspense
+
+Streaming allows you to progressively render your application's UI from the server to the client, even if some of the data is not yet available. This means that users can start interacting with your application sooner, even if it's not fully loaded.
+
+Suspense is a React feature that allows you to show a fallback UI while an asynchronous operation is pending. This can be used to show a loading spinner while your application fetches data, or to show a placeholder image while your application loads an image from the network.
+
+
+
+**Example**
+
+```js
+import UserPost from "@/app/components/UserPost";
+import getPost from "@/utils/getPost";
+import getUser from "@/utils/getUser";
+import { Suspense } from "react";
+
+async function getPost(id) {
+  const post = await fetch(`https://jsonplaceholder.typicode.com/posts?userId=${id}`);
+  if (!post.ok) {
+    throw new Error("Failed to Fetch Post");
+  }
+  const data = await post.json();
+  return data;
+}
+
+async function getUser(id) {
+  const user = await fetch(`https://jsonplaceholder.typicode.com/users/${id}`);
+  if (!user.ok) {
+    throw new Error("Failed to Fetch User");
+  }
+  const data = await user.json();
+  return data;
+}
+
+const UserPost = async ({ posts }) => {
+  const postData = await posts;
+  console.log(postData);
+  return (
+    <div>
+      <ul>
+        {postData.map((post) => {
+          return (
+            <li key={post.id}>
+              <h2>{post.title}</h2>
+              <p>{post.body}</p>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
+
+
+export const generateMetadata = async ({ params: { id } }) => {
+  const { name, email } = await getUser(id);
+  return {
+    title: name,
+  };
+};
+const User = async ({ params: { id } }) => {
+  console.log(id);
+  const user = getUser(id);
+  const posts = getPost(id);
+  const userData = await user;
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-between p-24">
+      <h2>Name: {userData.name}</h2>
+      <Suspense fallback={<p>Loading...</p>}>
+        <UserPost posts={posts} />
+      </Suspense>
+    </div>
+  );
+};
+
+export default User;
+```
+
+### Old Methods
+
+Next.js data fetching methods such as getServerSideProps, getStaticProps, and getInitialProps are not supported in the new App Router.
+
+## Route Handlers
+
+It allows developers to create custom request handlers for a given route using the Web Request and Response APIs.
+
+- They can be used to handle any HTTP method, including GET, POST, PUT, PATCH, DELETE, HEAD, and OPTIONS.
+- They can be used to access the request object, which contains information about the incoming request, such as the URL, headers, and body.
+- They can be used to respond to the request, by sending a response object, which contains the response status code, headers, and body.
+- They are only available inside the app directory.
+- Route Handlers are defined in a route.js|ts file inside the app directory
+
+### Static Route Handlers
+
+It means that the handler code will be executed at build time, and the result will be embedded in the generated JavaScript bundle. This can be useful for serving static content, such as images, JSON files, or HTML pages.
+
+**Example**
+
+```js
+import { getPosts, setPosts } from "@/utils/data";
+import { NextResponse } from "next/server";
+
+export const GET = async (req, resp) => {
+  try {
+    const posts = getPosts();
+    return NextResponse.json({ message: "OK", posts }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ message: "ERROR" }, { status: 500 });
+  }
+};
+
+export const POST = async (req, resp) => {
+  try {
+    const posts = await req.json();
+    setPosts(posts);
+    return NextResponse.json({ message: "OK", posts }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ message: "ERROR" }, { status: 500 });
+  }
+};
+```
+
+### Dynamic Route Handlers
+
+When the request happen it evaluated dynamically.
+
+**Example**
+
+```js
+import { deletePost, getById, updatePost } from "@/utils/data";
+import { NextResponse } from "next/server";
+
+export const GET = async (req, resp) => {
+  try {
+    const id = req.url.split("blog/")[1];
+    const post = getById(id.toString());
+    if (!post) {
+      return NextResponse.json({ message: "ERROR" }, { status: 404 });
+    }
+    return NextResponse.json({ message: "OK", post }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ message: "ERROR" }, { status: 500 });
+  }
+};
+
+export const PUT = async (req) => {
+  try {
+    const { title } = await req.json();
+    const id = req.url.split("blog/")[1];
+    updatePost(id, title);
+    return NextResponse.json({ message: "OK", post }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ message: "ERROR" }, { status: 500 });
+  }
+};
+
+export const DELETE = async (req) => {
+  try {
+    const id = req.url.split("blog/")[1];
+    deletePost(id, title);
+    return NextResponse.json({ message: "OK", post }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ message: "ERROR" }, { status: 500 });
+  }
+};
+
+```
+
+
+
+
 
 
